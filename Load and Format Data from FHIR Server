@@ -1,0 +1,118 @@
+pip install fhirclient
+
+Settings
+
+from fhirclient import client
+settings = {
+    'app_id': 'my_web_app',
+    'api_base': 'http://hapi.fhir.org/baseDstu3'
+}
+smart = client.FHIRClient(settings = settings)
+
+import pandas as pd
+import numpy as np
+from pandas.io.json import json_normalize
+
+def flatten_json(y):
+    out = {}
+
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '_')
+        elif type(x) is list:
+            i = 0
+            for a in x:
+                flatten(a, name)
+                i += 1
+        else:
+            out[name[:-1]] = x
+
+    flatten(y)
+    return out
+    
+Patients
+    
+import fhirclient.models.patient as p
+
+# search patients with address-country and flatten JSON into table
+search = p.Patient.where(struct={'address-country': 'USA'})
+patients = search.perform_resources(smart.server)
+
+flat = flatten_json(patients[0].as_json())
+result = json_normalize(flat)
+
+for patient in patients:
+    f = flatten_json(patient.as_json())
+    r = json_normalize(f)
+    result = pd.concat([result, r], axis = 0, ignore_index = True, sort = True)
+
+result = result.reset_index(drop=True)
+result = result.drop(0)
+result = result.replace(np.nan, '', regex = True)
+result = result[['id', 'identifier_value', 'active', 'name_given', 'name_family', 'name_use', 'telecom_system',
+                'telecom_use', 'telecom_value', 'gender', 'birthDate', 'deceasedBoolean', 
+                'address_line', 'address_district', 'address_city', 'address_state', 
+                'address_postalCode', 'address_country', 'address_period_start', 
+                'address_use', 'address_type', 'address_text', 'maritalStatus_coding_code',
+                'maritalStatus_coding_display', 'maritalStatus_text', 'multipleBirthBoolean',
+                'multipleBirthInteger', 'contact_relationship_coding_code', 
+                'contact_relationship_id', 'contact_name_given', 'contact_name_family', 'contact_name_text',
+                'contact_name_use', 'contact_telecom_system', 'contact_telecom_use', 'contact_telecom_value', 
+                'contact_gender', 'managingOrganization_reference', 'resourceType' 
+                ]]
+result 
+
+Observations
+
+import fhirclient.models.observation as o
+
+# search observations with subject as Patient/1956480 and flatten JSON into table
+search = o.Observation.where(struct={'subject': 'Patient/1956480'})
+observations = search.perform_resources(smart.server)
+
+flat = flatten_json(observations[0].as_json())
+result = json_normalize(flat)
+
+for observation in observations:
+    f = flatten_json(observation.as_json())
+    r = json_normalize(f)
+    result = pd.concat([result, r], axis = 0, ignore_index = True, sort = True)
+    
+result = result.reset_index(drop=True)
+result = result.drop(0)
+result = result.replace(np.nan, '', regex = True)
+result = result[['id', 'status', 'category_coding_code', 'category_coding_display',
+                'code_coding_code', 'code_coding_display', 'code_text', 
+                'subject_reference', 'effectiveDateTime', 'issued', 'valueQuantity_code',
+                'valueQuantity_system', 'valueQuantity_value', 'valueQuantity_unit', 
+                'valueCodeableConcept_coding_code', 'valueCodeableConcept_coding_display',
+                'valueCodeableConcept_text', 'component_code_coding_code', 'component_code_coding_display',
+                'component_code_text', 'component_valueQuantity_code', 'component_valueQuantity_system',
+                'component_valueQuantity_value', 'component_valueQuantity_unit',
+                'resourceType' 
+                ]]
+result
+
+Medications
+
+import fhirclient.models.medication as m
+
+# search 20 medications and flatten JSON into table
+search = m.Medication.where(struct={'_count': '20'})
+medications = search.perform_resources(smart.server)
+
+flat = flatten_json(medications[0].as_json())
+result = json_normalize(flat)
+
+for medication in medications:
+    f = flatten_json(medication.as_json())
+    r = json_normalize(f)
+    result = pd.concat([result, r], axis = 0, ignore_index = True, sort = True)
+    
+result = result.reset_index(drop=True)
+result = result.drop(0)
+result = result.replace(np.nan, '', regex = True)
+result = result[['id', 'code_coding_code', 'code_coding_display', 'code_text',
+                'status', 'resourceType']]
+result
